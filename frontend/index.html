@@ -1,0 +1,215 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="StreamFlix - Descubra, cadastre e curta filmes.">
+    <title>StreamFlix</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <header class="cabecalho">
+        <section class="secao-usuario">
+            <img
+                id="foto-perfil"
+                src="assets/perfil.svg"
+                alt="Foto do perfil"
+                class="foto-perfil"
+            >
+            <span id="nome-usuario">@StreamFlix</span>
+            <button id="btn-perfil" class="botao-escuro" type="button">
+                Ver Perfil
+            </button>
+        </section>
+
+        <section class="secao-empresa">
+            <h1>StreamFlix</h1>
+        </section>
+
+        <section class="secao-login">
+            <button id="btn-login" class="botao-escuro" type="button">
+                Entrar
+            </button>
+            <button id="btn-logout" class="botao-escuro" type="button" hidden>
+                Sair
+            </button>
+        </section>
+    </header>
+
+    <main class="conteudo">
+        <section id="secao-busca" class="secao-busca">
+            <input
+                id="campo-busca"
+                type="search"
+                placeholder="Digite o nome do administrador..."
+                aria-label="Buscar filmes por administrador"
+            >
+            <button id="btn-busca" type="button" aria-label="Buscar administrador">
+                <img src="assets/lupa.svg" alt="">
+            </button>
+        </section>
+
+        <p id="mensagem-busca" class="mensagem" role="status"></p>
+
+        <section id="secao-cadastro" class="secao-cadastro" hidden>
+            <h2>Cadastro de Filmes</h2>
+
+            <form id="form-filme">
+                <label for="titulo-filme">Título do Filme</label>
+                <input
+                    id="titulo-filme"
+                    name="titulo"
+                    type="text"
+                    placeholder="Ex.: Interestelar"
+                    required
+                >
+                <p id="erro-titulo" class="mensagem-erro" role="alert"></p>
+
+                <label for="genero-filme">Gênero</label>
+                <input
+                    id="genero-filme"
+                    name="genero"
+                    type="text"
+                    placeholder="Ex.: Ficção Científica"
+                    required
+                >
+                <p id="erro-genero" class="mensagem-erro" role="alert"></p>
+
+                <label for="descricao-filme">Descrição</label>
+                <textarea
+                    id="descricao-filme"
+                    name="descricao"
+                    placeholder="Escreva uma breve descrição do filme"
+                    rows="3"
+                ></textarea>
+
+                <label for="ano-filme">Ano de lançamento</label>
+                <input
+                    id="ano-filme"
+                    name="ano_lancamento"
+                    type="number"
+                    min="1888"
+                    placeholder="Ex.: 2014"
+                >
+
+                <label for="capa-filme">Capa do filme</label>
+                <input
+                    id="capa-filme"
+                    name="capa"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
+                >
+                <p id="nome-arquivo">Nenhum arquivo escolhido</p>
+                <p id="erro-capa" class="mensagem-erro" role="alert"></p>
+                <p id="mensagem-cadastro" class="mensagem" role="status"></p>
+
+                <button class="botao-escuro" type="submit">Cadastrar</button>
+            </form>
+
+            <h2>Seus filmes cadastrados</h2>
+            <div id="lista-filmes-admin" class="lista-filmes"></div>
+        </section>
+
+        <section class="secao-galeria">
+            <h2 id="titulo-galeria">Galeria de filmes</h2>
+            <p id="mensagem" class="mensagem" role="status">
+                Carregando filmes...
+            </p>
+            <div id="lista-filmes" class="lista-filmes"></div>
+        </section>
+    </main>
+
+    <div id="fundo-menu" class="fundo-menu" hidden></div>
+
+    <aside
+        id="menu-perfil"
+        class="menu-lateral"
+        aria-label="Perfil do administrador"
+        hidden
+    >
+        <button
+            id="btn-fechar-perfil"
+            class="fechar-modal"
+            type="button"
+            aria-label="Fechar menu"
+        >×</button>
+
+        <h2>Perfil do administrador</h2>
+        <p id="total-likes">0 Likes</p>
+        <p id="total-filmes">0 Filmes</p>
+
+        <button id="btn-seus-filmes" type="button">Seus filmes</button>
+        <button id="btn-cadastrar-filme" type="button">Cadastrar filme</button>
+    </aside>
+
+    <footer class="rodape">
+        <strong>StreamFlix</strong>
+
+        <div class="rodape-redes">
+            <a href="https://www.instagram.com/" aria-label="Instagram">
+                <img src="assets/instagram.svg" alt="">
+            </a>
+            <a href="https://www.tiktok.com/" aria-label="TikTok">
+                <img src="assets/tiktok.svg" alt="">
+            </a>
+            <a href="https://www.linkedin.com/" aria-label="LinkedIn">
+                <img src="assets/linkedIn.svg" alt="">
+            </a>
+            <a href="https://www.youtube.com/" aria-label="YouTube">
+                <img src="assets/youtube.svg" alt="">
+            </a>
+        </div>
+
+        <span>Copyright 2026-2027</span>
+    </footer>
+
+    <dialog id="modal-login" class="modal-login">
+        <form id="form-login" class="form-login">
+            <button
+                type="button"
+                id="btn-fechar-modal"
+                class="fechar-modal"
+                aria-label="Fechar login"
+            >×</button>
+
+            <h2>Login</h2>
+
+            <label for="nome_usuario">Nome de usuário</label>
+            <input
+                id="nome_usuario"
+                name="nome_usuario"
+                type="text"
+                placeholder="Digite seu nome_usuario"
+                minlength="3"
+                required
+                autocomplete="username"
+            >
+            <p id="erro-nome-usuario" class="mensagem-erro" role="alert"></p>
+
+            <label for="senha">Senha</label>
+            <input
+                id="senha"
+                name="senha"
+                type="password"
+                placeholder="Digite sua senha"
+                required
+                autocomplete="current-password"
+            >
+            <p id="erro-senha" class="mensagem-erro" role="alert"></p>
+
+            <p id="mensagem-login" class="mensagem" role="status"></p>
+
+            <div class="botoes-login">
+                <button
+                    type="button"
+                    id="btn-cancelar-login"
+                    class="botao-cancelar"
+                >Cancelar</button>
+
+                <button type="submit" class="botao-escuro">Entrar</button>
+            </div>
+        </form>
+    </dialog>
+</body>
+</html>

@@ -1,648 +1,250 @@
-﻿const API_URL = 'http://localhost:3000/api';
-
-const $ = (id) => document.getElementById(id);
+﻿
+const API_URL = 'http://localhost:3000/api';
+const SERVIDOR_URL = 'http://localhost:3000';
+const ASSETS_URL = `${SERVIDOR_URL}/assets`;
 
 let usuarioAtual = null;
-let tokenAtual = null;
-let filmes = [];
-let meusFilmes = [];
-let idsCurtidos = new Set();
-let modoMeusFilmes = false;
+let publicacoes = [];
+let minhasCurtidas = new Set();
+let modoMinhasPublicacoes = false;
+let fotografoBuscado = null;
 
-const listaFilmes = $('lista-filmes');
-const mensagem = $('mensagem');
-const modalLogin = $('modal-login');
-const formLogin = $('form-login');
+const elemento = (id) => document.getElementById(id);
 
-function escapar(valor) {
-    return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    })[caractere]);
-}
+// =====================================================
+// REQUISIÇÕES À API
+// =====================================================
 
-async function requisicao(url, opcoes = {}) {
+async function requisicao(caminho, opcoes = {}) {
     const cabecalhos = { ...(opcoes.headers || {}) };
-
-    if (tokenAtual) {
-        cabecalhos.Authorization = `Bearer ${tokenAtual}`;
-    }
 
     if (opcoes.body && !(opcoes.body instanceof FormData)) {
         cabecalhos['Content-Type'] = 'application/json';
     }
 
-    const resposta = await fetch(`${API_URL}${url}`, {
+    const resposta = await fetch(`${API_URL}${caminho}`, {
         ...opcoes,
-        headers: cabecalhos
+        headers: cabecalhos,
+        credentials: 'include'
     });
 
     const dados = await resposta.json().catch(() => ({}));
 
     if (!resposta.ok) {
         throw new Error(
-            dados.erro ||
-            dados.mensagem ||
-            dados.message ||
-            `Ocorreu um erro na requisição (${resposta.status}).`
+            dados.erro || dados.mensagem || 'Ocorreu um erro.'
         );
     }
 
     return dados;
 }
 
-function mostrarMensagem(texto, elemento = mensagem) {
-    if (elemento) {
-        elemento.textContent = texto || '';
-    }
+// =====================================================
+// MENSAGENS
+// =====================================================
+
+function mostrarMensagem(id, mensagem, erro = false) {
+    const campo = elemento(id);
+
+    if (!campo) return;
+
+    campo.textContent = mensagem;
+    campo.classList.toggle('erro', erro);
+    campo.hidden = !mensagem;
+    campo.style.display = mensagem ? 'block' : 'none';
 }
 
-function abrirLogin(texto = '') {
-    mostrarMensagem(texto, $('mensagem-login'));
-    mostrarMensagem('', $('erro-nome-usuario'));
-    mostrarMensagem('', $('erro-senha'));
-
-    if (!modalLogin.open) {
-        modalLogin.showModal();
-    }
-
-    $('nome_usuario').focus();
+function limparMensagem(id) {
+    mostrarMensagem(id, '');
 }
 
-function fecharLogin() {
-    if (modalLogin.open) {
-        modalLogin.close();
+// =====================================================
+// IMAGENS
+// =====================================================
+
+function urlImagem(caminho) {
+    if (!caminho) {
+        return `${ASSETS_URL}/saepVision.jpeg`;
     }
+
+    if (/^https?:\/\//i.test(caminho)) {
+        return caminho;
+    }
+
+    const caminhoLimpo = caminho.replace(/^\/+/, '');
+
+    if (caminhoLimpo.startsWith('assets/')) {
+        return `${SERVIDOR_URL}/${caminhoLimpo}`;
+    }
+
+    return `${ASSETS_URL}/${encodeURIComponent(
+        caminhoLimpo.split('/').pop()
+    )}`;
 }
+
+function configurarImagem(img, caminho, textoAlternativo = '') {
+    if (!img) return;
+
+    img.onerror = () => {
+        img.onerror = null;
+        img.src = `${ASSETS_URL}/saepVision.jpeg`;
+    };
+
+    img.src = urlImagem(caminho);
+    img.alt = textoAlternativo;
+}
+
+function criarImagem(src, alt, classe) {
+    const img = document.createElement('img');
+
+    img.className = classe || '';
+    configurarImagem(img, src, alt || '');
+
+    return img;
+}
+
+// =====================================================
+// CABEÇALHO E PERFIL DO USUÁRIO
+// =====================================================
 
 function atualizarCabecalho() {
-    $('nome-usuario').textContent = usuarioAtual
-        ? `@${usuarioAtual.nome_usuario}`
-        : '@StreamFlix';
+    const botaoLogin = elemento('btn-login');
+    const botaoLogout = elemento('btn-logout');
+    const botaoPerfil = elemento('btn-perfil');
 
-    $('btn-login').hidden = Boolean(usuarioAtual);
-    $('btn-logout').hidden = !usuarioAtual;
+    const nomeUsuario = elemento('nome-usuario');
+    const fotoPerfil = elemento('foto-perfil');
+    const fotoPerfilMenu = elemento('foto-perfil-menu');
+    const nomePerfilMenu = elemento('nome-perfil-menu');
 
-    $('btn-perfil').disabled =
-        !usuarioAtual || usuarioAtual.tipo !== 'administrador';
+    const logado = Boolean(usuarioAtual);
 
-    const foto = $('foto-perfil');
-
-    if (usuarioAtual && usuarioAtual.imagem_usuario) {
-        foto.src = usuarioAtual.imagem_usuario;
-        foto.alt = `Foto de ${usuarioAtual.nome || usuarioAtual.nome_usuario}`;
-    } else {
-        foto.src = 'assets/perfil.svg';
-        foto.alt = 'Foto do perfil';
+    if (botaoLogin) {
+        botaoLogin.hidden = logado;
     }
 
-    if (!usuarioAtual || usuarioAtual.tipo !== 'administrador') {
-        $('secao-cadastro').hidden = true;
-    }
-}
-
-function salvarSessao() {
-    if (usuarioAtual && tokenAtual) {
-        localStorage.setItem(
-            'streamflix_usuario',
-            JSON.stringify(usuarioAtual)
-        );
-
-        localStorage.setItem('streamflix_token', tokenAtual);
-    } else {
-        localStorage.removeItem('streamflix_usuario');
-        localStorage.removeItem('streamflix_token');
-    }
-}
-
-function carregarSessao() {
-    try {
-        tokenAtual = localStorage.getItem('streamflix_token');
-
-        const usuarioSalvo = localStorage.getItem('streamflix_usuario');
-
-        usuarioAtual = usuarioSalvo
-            ? JSON.parse(usuarioSalvo)
-            : null;
-
-        if (!tokenAtual || !usuarioAtual) {
-            usuarioAtual = null;
-            tokenAtual = null;
-        }
-    } catch {
-        usuarioAtual = null;
-        tokenAtual = null;
+    if (botaoLogout) {
+        botaoLogout.hidden = !logado;
     }
 
-    atualizarCabecalho();
-}
-
-function imagemCapa(caminho) {
-    if (!caminho) {
-        return '';
+    if (nomeUsuario) {
+        nomeUsuario.textContent = usuarioAtual
+            ? `@${usuarioAtual.nome_usuario}`
+            : '@SAEPVision';
     }
 
-    if (/^(https?:\/\/|data:image\/)/i.test(caminho)) {
-        return caminho;
-    }
+    const caminhoFoto = usuarioAtual?.imagem_usuario || 'saepVision.jpeg';
 
-    if (caminho.startsWith('/')) {
-        return caminho;
-    }
+    const nomeCompleto = usuarioAtual
+        ? usuarioAtual.nome || usuarioAtual.nome_usuario
+        : 'SAEPVision';
 
-    return `./assets/${encodeURIComponent(caminho)}`;
-}
-
-async function carregarCurtidas() {
-    idsCurtidos.clear();
-
-    if (!usuarioAtual || !tokenAtual) {
-        return;
-    }
-
-    try {
-        const resultado = await requisicao('/curtidas/minhas');
-
-        const lista = Array.isArray(resultado)
-            ? resultado
-            : (resultado.curtidas || resultado.dados || []);
-
-        lista.forEach(item => {
-            const id = typeof item === 'object'
-                ? item.id_filme
-                : item;
-
-            if (id !== undefined && id !== null) {
-                idsCurtidos.add(Number(id));
-            }
-        });
-    } catch (erro) {
-        console.warn(
-            'Não foi possível carregar as curtidas:',
-            erro.message
-        );
-    }
-}
-
-async function quantidadeCurtidas(idFilme) {
-    try {
-        const dados = await requisicao(
-            `/curtidas/${idFilme}/quantidade`
-        );
-
-        if (typeof dados === 'number') {
-            return dados;
-        }
-
-        return Number(
-            dados.quantidade ??
-            dados.total ??
-            dados.likes ??
-            0
-        );
-    } catch {
-        return 0;
-    }
-}
-
-function criarCard(filme, opcoes = {}) {
-    const idFilme = Number(filme.id_filme);
-    const curtiu = idsCurtidos.has(idFilme);
-    const capa = imagemCapa(filme.imagem_capa);
-
-    const botaoExcluir = opcoes.mostrarExcluir
-        ? `<button class="botao-cancelar" type="button"
-                    data-excluir="${idFilme}">Excluir</button>`
-        : '';
-
-    return `
-        <article class="filme" data-id="${idFilme}">
-            <div class="area-capa">
-                ${
-                    capa
-                        ? `
-                            <img
-                                class="capa-filme"
-                                src="${escapar(capa)}"
-                                alt="Capa de ${escapar(filme.titulo || 'filme')}"
-                                onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.hidden=false"
-                            >
-
-                            <div
-                                class="capa-filme capa-vazia"
-                                hidden
-                            >
-                                Imagem indisponível
-                            </div>
-                        `
-                        : `
-                            <div
-                                class="capa-filme capa-vazia"
-                                role="img"
-                                aria-label="Capa não disponível"
-                            >
-                                Capa indisponível
-                            </div>
-                        `
-                }
-
-                <div class="informacao-filme">
-                    <p>
-                        Cadastrado por:
-                        @${escapar(
-                            filme.administrador ||
-                            usuarioAtual?.nome_usuario ||
-                            'administrador'
-                        )}
-                    </p>
-
-                    <p>
-                        Gênero:
-                        ${escapar(filme.genero || 'Não informado')}
-                    </p>
-                </div>
-            </div>
-
-            <div class="conteudo-filme">
-                <h3>
-                    ${escapar(filme.titulo || 'Filme sem título')}
-                </h3>
-
-                ${
-                    filme.ano_lancamento
-                        ? `<p>Ano: ${escapar(filme.ano_lancamento)}</p>`
-                        : ''
-                }
-
-                ${
-                    filme.descricao
-                        ? `<p>${escapar(filme.descricao)}</p>`
-                        : ''
-                }
-
-                <div class="acoes-filme">
-                    <button
-                        class="botao-curtir ${curtiu ? 'curtiu' : ''}"
-                        type="button"
-                        data-curtir="${idFilme}"
-                        aria-label="${curtiu ? 'Remover curtida' : 'Curtir filme'}"
-                        aria-pressed="${curtiu}"
-                    >
-                        <span
-                            class="icone-coracao"
-                            style="color:${curtiu ? '#f00' : '#000'}"
-                            aria-hidden="true"
-                        >${curtiu ? '♥' : '♡'}</span>
-                    </button>
-
-                    <span
-                        class="quantidade-curtidas"
-                        data-quantidade="${idFilme}"
-                    >...</span>
-
-                    ${botaoExcluir}
-                </div>
-            </div>
-        </article>
-    `;
-}
-
-async function atualizarContagens(container = document) {
-    const elementos = [
-        ...container.querySelectorAll('[data-quantidade]')
-    ];
-
-    await Promise.all(
-        elementos.map(async elemento => {
-            const quantidade = await quantidadeCurtidas(
-                Number(elemento.dataset.quantidade)
-            );
-
-            elemento.textContent = quantidade;
-        })
-    );
-}
-
-function renderizarFilmes() {
-    listaFilmes.innerHTML = '';
-
-    if (!filmes.length) {
-        mostrarMensagem('Nenhum filme encontrado.');
-        return;
-    }
-
-    mostrarMensagem('');
-
-    listaFilmes.innerHTML = filmes
-        .map(filme => criarCard(filme))
-        .join('');
-
-    atualizarContagens(listaFilmes);
-}
-
-async function carregarFilmes() {
-    mostrarMensagem('Carregando filmes...');
-
-    try {
-        await carregarCurtidas();
-
-        const resultado = await requisicao('/filmes');
-
-        filmes = Array.isArray(resultado)
-            ? resultado
-            : (resultado.filmes || resultado.dados || []);
-
-        modoMeusFilmes = false;
-
-        $('titulo-galeria').textContent = 'Galeria de filmes';
-
-        renderizarFilmes();
-    } catch (erro) {
-        listaFilmes.innerHTML = '';
-
-        mostrarMensagem(
-            `Não foi possível carregar os filmes: ${erro.message}`
-        );
-    }
-}
-
-async function pesquisarAdministrador() {
-    if (!usuarioAtual) {
-        abrirLogin('Entre para pesquisar administradores.');
-        return;
-    }
-
-    const nome = $('campo-busca').value.trim();
-
-    if (!nome) {
-        await carregarFilmes();
-        return;
-    }
-
-    try {
-        mostrarMensagem('Pesquisando administrador...');
-
-        const resultado = await requisicao(
-            `/filmes/administrador/${encodeURIComponent(
-                nome.replace(/^@/, '')
-            )}`
-        );
-
-        filmes = Array.isArray(resultado)
-            ? resultado
-            : (resultado.filmes || resultado.dados || []);
-
-        modoMeusFilmes = false;
-
-        $('titulo-galeria').textContent =
-            `Filmes de @${nome.replace(/^@/, '')}`;
-
-        renderizarFilmes();
-
-        if (!filmes.length) {
-            mostrarMensagem(
-                'Este administrador ainda não cadastrou filmes.'
-            );
-        }
-    } catch (erro) {
-        filmes = [];
-        listaFilmes.innerHTML = '';
-
-        mostrarMensagem(
-            erro.message.toLowerCase().includes('não encontrado')
-                ? 'Administrador não encontrado.'
-                : erro.message
-        );
-    }
-}
-
-async function alternarCurtida(idFilme) {
-    if (!usuarioAtual || !tokenAtual) {
-        abrirLogin('Entre na sua conta para curtir filmes.');
-        return;
-    }
-
-    const botao = document.querySelector(
-        `[data-curtir="${idFilme}"]`
+    configurarImagem(
+        fotoPerfil,
+        caminhoFoto,
+        `Foto de ${nomeCompleto}`
     );
 
-    if (!botao || botao.disabled) {
-        return;
+    configurarImagem(
+        fotoPerfilMenu,
+        caminhoFoto,
+        `Foto de ${nomeCompleto}`
+    );
+
+    if (nomePerfilMenu) {
+        nomePerfilMenu.textContent = usuarioAtual
+            ? nomeCompleto
+            : 'Meu perfil';
     }
 
-    botao.disabled = true;
+    if (botaoPerfil) {
+        botaoPerfil.disabled = usuarioAtual?.tipo !== 'fotografo';
+    }
 
-    try {
-        if (idsCurtidos.has(idFilme)) {
-            await requisicao(
-                `/curtidas/${idFilme}`,
-                { method: 'DELETE' }
-            );
+    const secaoCadastro = elemento('secao-cadastro');
 
-            idsCurtidos.delete(idFilme);
-        } else {
-            await requisicao(
-                `/curtidas/${idFilme}`,
-                { method: 'POST' }
-            );
-
-            idsCurtidos.add(idFilme);
-        }
-
-        if (modoMeusFilmes) {
-            renderizarMeusFilmes();
-        } else {
-            renderizarFilmes();
-        }
-    } catch (erro) {
-        mostrarMensagem(erro.message);
-    } finally {
-        const botaoAtual = document.querySelector(
-            `[data-curtir="${idFilme}"]`
+    if (secaoCadastro) {
+        secaoCadastro.hidden = !(
+            usuarioAtual?.tipo === 'fotografo' &&
+            modoMinhasPublicacoes
         );
+    }
 
-        if (botaoAtual) {
-            botaoAtual.disabled = false;
-        }
+    const busca = elemento('secao-busca');
+
+    if (busca) {
+        busca.hidden = modoMinhasPublicacoes;
     }
 }
 
-function renderizarMeusFilmes() {
-    const listaAdmin = $('lista-filmes-admin');
+// =====================================================
+// MODAL DE LOGIN
+// =====================================================
 
-    listaAdmin.innerHTML = '';
+function abrirModalLogin() {
+    const modal = elemento('modal-login');
 
-    if (!meusFilmes.length) {
-        listaAdmin.innerHTML =
-            '<p>Você ainda não cadastrou filmes.</p>';
+    if (!modal) return;
 
-        return;
+    limparMensagem('mensagem-login');
+    limparMensagem('erro-nome-usuario');
+    limparMensagem('erro-senha');
+
+    if (typeof modal.showModal === 'function' && !modal.open) {
+        modal.showModal();
+    } else {
+        modal.style.display = 'flex';
     }
 
-    listaAdmin.innerHTML = meusFilmes
-        .map(filme => criarCard(filme, { mostrarExcluir: true }))
-        .join('');
-
-    atualizarContagens(listaAdmin);
+    elemento('nome_usuario')?.focus();
 }
 
-async function carregarMeusFilmes() {
-    if (
-        !usuarioAtual ||
-        usuarioAtual.tipo !== 'administrador'
-    ) {
-        abrirLogin('Entre com uma conta de administrador.');
-        return;
+function fecharModalLogin() {
+    const modal = elemento('modal-login');
+
+    if (!modal) return;
+
+    if (typeof modal.close === 'function' && modal.open) {
+        modal.close();
+    } else {
+        modal.style.display = 'none';
     }
 
-    try {
-        const resultado = await requisicao('/filmes/meus');
-
-        meusFilmes = (
-            Array.isArray(resultado)
-                ? resultado
-                : (resultado.filmes || resultado.dados || [])
-        ).map(filme => ({
-            ...filme,
-            administrador: usuarioAtual.nome_usuario
-        }));
-
-        renderizarMeusFilmes();
-
-        fecharMenuPerfil();
-
-        $('secao-cadastro').hidden = false;
-
-        $('titulo-galeria').textContent = 'Galeria de filmes';
-    } catch (erro) {
-        mostrarMensagem(erro.message);
-    }
+    limparMensagem('mensagem-login');
+    limparMensagem('erro-nome-usuario');
+    limparMensagem('erro-senha');
 }
 
-async function abrirPerfilAdministrador() {
-    if (!usuarioAtual) {
-        abrirLogin();
-        return;
-    }
-
-    if (usuarioAtual.tipo !== 'administrador') {
-        return;
-    }
-
-    try {
-        const resultado = await requisicao('/filmes/meus');
-
-        const lista = Array.isArray(resultado)
-            ? resultado
-            : (resultado.filmes || resultado.dados || []);
-
-        const quantidades = await Promise.all(
-            lista.map(filme =>
-                quantidadeCurtidas(filme.id_filme)
-            )
-        );
-
-        $('total-filmes').textContent =
-            `${lista.length} Filmes`;
-
-        $('total-likes').textContent =
-            `${quantidades.reduce(
-                (total, numero) => total + numero,
-                0
-            )} Likes`;
-
-        $('fundo-menu').hidden = false;
-        $('menu-perfil').hidden = false;
-    } catch (erro) {
-        mostrarMensagem(erro.message);
-    }
-}
-
-function fecharMenuPerfil() {
-    $('menu-perfil').hidden = true;
-    $('fundo-menu').hidden = true;
-}
-
-function mostrarCadastro() {
-    if (
-        !usuarioAtual ||
-        usuarioAtual.tipo !== 'administrador'
-    ) {
-        abrirLogin('Entre com uma conta de administrador.');
-        return;
-    }
-
-    $('secao-cadastro').hidden = false;
-
-    fecharMenuPerfil();
-
-    $('form-filme').scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-    });
-
-    $('titulo-filme').focus();
-}
-
-async function excluirFilme(idFilme) {
-    try {
-        await requisicao(
-            `/filmes/${idFilme}`,
-            { method: 'DELETE' }
-        );
-
-        mostrarMensagem('Filme excluído com sucesso!');
-
-        await carregarMeusFilmes();
-        await carregarFilmes();
-    } catch (erro) {
-        mostrarMensagem(erro.message);
-    }
-}
-
-formLogin.addEventListener('submit', async evento => {
+async function fazerLogin(evento) {
     evento.preventDefault();
 
-    const nomeUsuario = $('nome_usuario').value.trim();
-    const senha = $('senha').value;
+    const campoNome = elemento('nome_usuario');
+    const campoSenha = elemento('senha');
 
-    mostrarMensagem('', $('erro-nome-usuario'));
-    mostrarMensagem('', $('erro-senha'));
-    mostrarMensagem('', $('mensagem-login'));
+    const nomeUsuario = campoNome.value.trim();
+    const senha = campoSenha.value;
 
-    let valido = true;
+    limparMensagem('erro-nome-usuario');
+    limparMensagem('erro-senha');
+    limparMensagem('mensagem-login');
 
     if (nomeUsuario.length < 3) {
         mostrarMensagem(
+            'erro-nome-usuario',
             'Digite um nome de usuário com pelo menos 3 caracteres.',
-            $('erro-nome-usuario')
+            true
         );
-
-        valido = false;
+        return;
     }
 
     if (!senha) {
         mostrarMensagem(
+            'erro-senha',
             'Digite sua senha.',
-            $('erro-senha')
+            true
         );
-
-        valido = false;
-    }
-
-    if (!valido) {
         return;
     }
-
-    const botaoEnviar = formLogin.querySelector(
-        'button[type="submit"]'
-    );
-
-    botaoEnviar.disabled = true;
-    botaoEnviar.textContent = 'Entrando...';
 
     try {
         const dados = await requisicao('/auth/login', {
@@ -653,253 +255,668 @@ formLogin.addEventListener('submit', async evento => {
             })
         });
 
-        const usuarioRecebido =
-            dados.usuario ||
-            dados.user ||
-            dados.dados?.usuario;
+        usuarioAtual = dados.usuario || null;
 
-        const tokenRecebido =
-            dados.token ||
-            dados.accessToken ||
-            dados.access_token;
-
-        if (!usuarioRecebido || !tokenRecebido) {
-            throw new Error(
-                dados.mensagem ||
-                'A API não retornou o usuário e o token do login.'
-            );
+        if (!usuarioAtual) {
+            throw new Error('A API não retornou os dados do usuário.');
         }
 
-        usuarioAtual = usuarioRecebido;
-        tokenAtual = tokenRecebido;
+        fecharModalLogin();
+        elemento('form-login').reset();
 
-        salvarSessao();
-        atualizarCabecalho();
-        fecharLogin();
-        formLogin.reset();
+        modoMinhasPublicacoes = false;
+        fotografoBuscado = null;
 
-        $('campo-busca').value = '';
-
-        mostrarMensagem('Login realizado com sucesso!');
-
-        await carregarFilmes();
-
-        if (usuarioAtual.tipo === 'administrador') {
-            await carregarMeusFilmes();
-        }
+        await iniciarAplicacao();
     } catch (erro) {
-        mostrarMensagem(
-            erro.message || 'Não foi possível entrar.',
-            $('mensagem-login')
-        );
-    } finally {
-        botaoEnviar.disabled = false;
-        botaoEnviar.textContent = 'Entrar';
+        mostrarMensagem('mensagem-login', erro.message, true);
     }
-});
+}
 
-$('btn-login').addEventListener('click', () => {
-    abrirLogin();
-});
+async function verificarSessao() {
+    try {
+        const dados = await requisicao('/auth/sessao');
+        usuarioAtual = dados.usuario || null;
+    } catch {
+        usuarioAtual = null;
+    }
 
-$('btn-perfil').addEventListener(
-    'click',
-    abrirPerfilAdministrador
-);
-
-$('btn-logout').addEventListener('click', async () => {
-    usuarioAtual = null;
-    tokenAtual = null;
-
-    idsCurtidos.clear();
-    meusFilmes = [];
-
-    salvarSessao();
     atualizarCabecalho();
+}
+
+async function fazerLogout() {
+    try {
+        await requisicao('/auth/logout', {
+            method: 'POST'
+        });
+    } catch (erro) {
+        console.error('Erro ao sair:', erro.message);
+    }
+
+    usuarioAtual = null;
+    minhasCurtidas.clear();
+    modoMinhasPublicacoes = false;
+    fotografoBuscado = null;
+
     fecharMenuPerfil();
+    fecharModalLogin();
 
-    $('campo-busca').value = '';
-    $('secao-cadastro').hidden = true;
-    $('lista-filmes-admin').innerHTML = '';
+    await iniciarAplicacao();
+}
 
-    await carregarFilmes();
-});
+// =====================================================
+// PUBLICAÇÕES
+// =====================================================
 
-$('btn-fechar-modal').addEventListener(
-    'click',
-    fecharLogin
-);
+async function carregarPublicacoes() {
+    let caminho = '/publicacoes';
 
-$('btn-cancelar-login').addEventListener(
-    'click',
-    fecharLogin
-);
-
-modalLogin.addEventListener('click', evento => {
-    if (evento.target === modalLogin) {
-        fecharLogin();
+    if (modoMinhasPublicacoes && usuarioAtual?.tipo === 'fotografo') {
+        caminho = '/publicacoes/minhas';
+    } else if (fotografoBuscado) {
+        caminho =
+            `/publicacoes/fotografo/${encodeURIComponent(fotografoBuscado)}`;
     }
-});
 
-$('campo-busca').addEventListener('focus', () => {
-    if (!usuarioAtual) {
-        abrirLogin('Entre para pesquisar administradores.');
+    try {
+        const dados = await requisicao(caminho);
+
+        publicacoes = dados.publicacoes || [];
+        renderizarPublicacoes();
+    } catch (erro) {
+        publicacoes = [];
+        renderizarPublicacoes();
+        mostrarMensagem('mensagem', erro.message, true);
     }
-});
+}
 
-$('btn-busca').addEventListener(
-    'click',
-    pesquisarAdministrador
-);
+async function carregarMinhasCurtidas() {
+    minhasCurtidas.clear();
 
-$('campo-busca').addEventListener('keydown', evento => {
-    if (evento.key === 'Enter') {
-        evento.preventDefault();
-        pesquisarAdministrador();
+    if (!usuarioAtual) return;
+
+    try {
+        const dados = await requisicao('/curtidas/minhas');
+
+        const curtidas = dados.curtidas || dados.idsCurtidos || [];
+
+        curtidas.forEach((item) => {
+            const id = typeof item === 'object'
+                ? item.id_publicacao
+                : item;
+
+            if (id !== undefined && id !== null) {
+                minhasCurtidas.add(Number(id));
+            }
+        });
+    } catch (erro) {
+        console.error('Erro ao carregar curtidas:', erro.message);
     }
-});
+}
 
-listaFilmes.addEventListener('click', evento => {
-    const botao = evento.target.closest('[data-curtir]');
+function renderizarPublicacoes() {
+    const lista = elemento(
+        modoMinhasPublicacoes
+            ? 'lista-filmes-admin'
+            : 'lista-filmes'
+    );
 
-    if (botao) {
-        alternarCurtida(Number(botao.dataset.curtir));
+    if (!lista) return;
+
+    lista.replaceChildren();
+
+    const tituloGaleria = elemento('titulo-galeria');
+
+    if (tituloGaleria) {
+        tituloGaleria.textContent = modoMinhasPublicacoes
+            ? 'Minhas fotografias'
+            : fotografoBuscado
+                ? `Fotografias de @${fotografoBuscado}`
+                : 'Galeria de fotografias';
     }
-});
 
-$('lista-filmes-admin').addEventListener('click', evento => {
-    const botaoCurtir = evento.target.closest('[data-curtir]');
+    if (publicacoes.length === 0) {
+        mostrarMensagem(
+            'mensagem',
+            modoMinhasPublicacoes
+                ? 'Você ainda não publicou fotografias.'
+                : fotografoBuscado
+                    ? 'Nenhuma fotografia encontrada para este fotógrafo.'
+                    : 'Nenhuma fotografia publicada ainda.'
+        );
 
-    if (botaoCurtir) {
-        alternarCurtida(Number(botaoCurtir.dataset.curtir));
         return;
     }
 
-    const botaoExcluir = evento.target.closest('[data-excluir]');
+    mostrarMensagem('mensagem', '');
 
-    if (botaoExcluir) {
-        excluirFilme(Number(botaoExcluir.dataset.excluir));
+    publicacoes.forEach((publicacao) => {
+        const card = document.createElement('article');
+        card.className = 'filme';
+
+        const capa = criarImagem(
+            publicacao.url_fotografia,
+            publicacao.titulo_imagem,
+            'capa-filme'
+        );
+
+        card.appendChild(capa);
+
+        const conteudo = document.createElement('div');
+        conteudo.className = 'conteudo-filme';
+
+        const titulo = document.createElement('h3');
+        titulo.textContent = publicacao.titulo_imagem || 'Fotografia';
+
+        const autor = document.createElement('p');
+        autor.className = 'informacao-filme';
+        autor.textContent =
+            `@${publicacao.nome_usuario || 'fotografo'}`;
+
+        const local = document.createElement('p');
+        local.className = 'informacao-filme';
+        local.textContent = publicacao.local_foto || '';
+
+        const acoes = document.createElement('div');
+        acoes.className = 'acoes-filme';
+
+        const botaoCurtir = document.createElement('button');
+        botaoCurtir.type = 'button';
+        botaoCurtir.className = 'botao-curtir';
+        botaoCurtir.setAttribute('aria-label', 'Curtir fotografia');
+
+        const icone = document.createElement('img');
+        icone.className = 'icone-coracao';
+        icone.src = `${ASSETS_URL}/coracao.svg`;
+        icone.alt = '';
+
+        const quantidade = document.createElement('span');
+        quantidade.className = 'quantidade-curtidas';
+        quantidade.textContent =
+            Number(publicacao.quantidade_curtidas || 0);
+
+        const curtido = minhasCurtidas.has(
+            Number(publicacao.id_publicacao)
+        );
+
+        botaoCurtir.classList.toggle('curtido', curtido);
+        botaoCurtir.append(icone, quantidade);
+
+        botaoCurtir.addEventListener('click', () => {
+            alternarCurtida(publicacao.id_publicacao);
+        });
+
+        acoes.appendChild(botaoCurtir);
+
+        const podeExcluir =
+            usuarioAtual?.tipo === 'fotografo' &&
+            Number(usuarioAtual.id_usuario) ===
+                Number(publicacao.id_usuario);
+
+        if (podeExcluir) {
+            const botaoExcluir = document.createElement('button');
+
+            botaoExcluir.type = 'button';
+            botaoExcluir.className = 'botao-excluir';
+            botaoExcluir.setAttribute(
+                'aria-label',
+                'Excluir fotografia'
+            );
+
+            const iconeExcluir = document.createElement('img');
+            iconeExcluir.src = `${ASSETS_URL}/lixeira.svg`;
+            iconeExcluir.alt = '';
+
+            botaoExcluir.appendChild(iconeExcluir);
+
+            botaoExcluir.addEventListener('click', () => {
+                excluirPublicacao(publicacao.id_publicacao);
+            });
+
+            acoes.appendChild(botaoExcluir);
+        }
+
+        conteudo.append(titulo, autor, local, acoes);
+        card.appendChild(conteudo);
+        lista.appendChild(card);
+    });
+}
+
+// =====================================================
+// CURTIDAS
+// =====================================================
+
+async function alternarCurtida(idPublicacao) {
+    if (!usuarioAtual) {
+        abrirModalLogin();
+        return;
     }
-});
 
-$('btn-fechar-perfil').addEventListener(
-    'click',
-    fecharMenuPerfil
-);
+    const id = Number(idPublicacao);
+    const jaCurtiu = minhasCurtidas.has(id);
 
-$('fundo-menu').addEventListener(
-    'click',
-    fecharMenuPerfil
-);
+    try {
+        const dados = await requisicao(`/curtidas/${id}`, {
+            method: jaCurtiu ? 'DELETE' : 'POST'
+        });
 
-$('btn-seus-filmes').addEventListener(
-    'click',
-    carregarMeusFilmes
-);
+        if (jaCurtiu) {
+            minhasCurtidas.delete(id);
+        } else {
+            minhasCurtidas.add(id);
+        }
 
-$('btn-cadastrar-filme').addEventListener(
-    'click',
-    mostrarCadastro
-);
+        const publicacao = publicacoes.find(
+            (item) => Number(item.id_publicacao) === id
+        );
 
-$('capa-filme').addEventListener('change', evento => {
-    const arquivo = evento.target.files[0];
+        if (publicacao && dados.quantidade_curtidas !== undefined) {
+            publicacao.quantidade_curtidas =
+                dados.quantidade_curtidas;
+        }
 
-    $('nome-arquivo').textContent = arquivo
-        ? arquivo.name
-        : 'Nenhum arquivo escolhido';
-});
+        renderizarPublicacoes();
+        await atualizarResumoPerfil();
+    } catch (erro) {
+        mostrarMensagem('mensagem', erro.message, true);
+    }
+}
 
-$('form-filme').addEventListener('submit', async evento => {
+// =====================================================
+// PESQUISA DE FOTÓGRAFOS
+// =====================================================
+
+async function executarBuscaFotografo() {
+    if (!usuarioAtual) {
+        abrirModalLogin();
+        return;
+    }
+
+    const nome = elemento('campo-busca')?.value.trim() || '';
+
+    limparMensagem('mensagem-busca');
+
+    if (!nome) {
+        fotografoBuscado = null;
+        modoMinhasPublicacoes = false;
+
+        atualizarCabecalho();
+        await carregarPublicacoes();
+
+        return;
+    }
+
+    fotografoBuscado = nome.replace(/^@/, '');
+    modoMinhasPublicacoes = false;
+
+    atualizarCabecalho();
+    await carregarPublicacoes();
+
+    if (publicacoes.length === 0) {
+        mostrarMensagem(
+            'mensagem-busca',
+            'Fotógrafo não encontrado ou sem publicações.',
+            true
+        );
+    }
+}
+
+// =====================================================
+// CADASTRAR FOTOGRAFIA
+// =====================================================
+
+async function cadastrarPublicacao(evento) {
     evento.preventDefault();
 
-    $('erro-titulo').textContent = '';
-    $('erro-genero').textContent = '';
-    $('erro-capa').textContent = '';
-    $('mensagem-cadastro').textContent = '';
+    if (usuarioAtual?.tipo !== 'fotografo') {
+        abrirModalLogin();
+        return;
+    }
 
-    const titulo = $('titulo-filme').value.trim();
-    const genero = $('genero-filme').value.trim();
-    const descricao = $('descricao-filme').value.trim();
-    const ano = $('ano-filme').value;
-    const arquivo = $('capa-filme').files[0];
+    const titulo = elemento('titulo-filme').value.trim();
+    const local = elemento('genero-filme').value.trim();
+    const arquivo = elemento('capa-filme').files[0];
 
-    let valido = true;
+    limparMensagem('erro-titulo');
+    limparMensagem('erro-genero');
+    limparMensagem('erro-capa');
+    limparMensagem('mensagem-cadastro');
 
     if (!titulo) {
-        $('erro-titulo').textContent =
-            'Informe o título do filme.';
-
-        valido = false;
+        mostrarMensagem(
+            'erro-titulo',
+            'Informe o título da fotografia.',
+            true
+        );
+        return;
     }
 
-    if (!genero) {
-        $('erro-genero').textContent =
-            'Informe o gênero do filme.';
-
-        valido = false;
+    if (!local) {
+        mostrarMensagem(
+            'erro-genero',
+            'Informe o local da fotografia.',
+            true
+        );
+        return;
     }
 
-    if (
-        arquivo &&
-        !/\.(jpe?g|png|gif|webp)$/i.test(arquivo.name)
-    ) {
-        $('erro-capa').textContent =
-            'Use um arquivo JPG, JPEG, PNG, GIF ou WEBP.';
-
-        valido = false;
+    if (!arquivo) {
+        mostrarMensagem(
+            'erro-capa',
+            'Selecione uma imagem.',
+            true
+        );
+        return;
     }
 
-    if (!valido) {
+    const tiposPermitidos = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp'
+    ];
+
+    if (!tiposPermitidos.includes(arquivo.type)) {
+        mostrarMensagem(
+            'erro-capa',
+            'Escolha uma imagem JPG, PNG, GIF ou WEBP.',
+            true
+        );
+        return;
+    }
+
+    if (arquivo.size > 10 * 1024 * 1024) {
+        mostrarMensagem(
+            'erro-capa',
+            'A imagem deve ter no máximo 10 MB.',
+            true
+        );
+        return;
+    }
+
+    const formulario = new FormData();
+
+    formulario.append('titulo_imagem', titulo);
+    formulario.append('local_foto', local);
+    formulario.append('fotografia', arquivo);
+
+    const form = elemento('form-filme');
+    const botao = form.querySelector('button[type="submit"]');
+
+    botao.disabled = true;
+    botao.textContent = 'Publicando...';
+
+    try {
+        await requisicao('/publicacoes', {
+            method: 'POST',
+            body: formulario
+        });
+
+        form.reset();
+
+        if (elemento('nome-arquivo')) {
+            elemento('nome-arquivo').textContent =
+                'Nenhum arquivo escolhido';
+        }
+
+        mostrarMensagem(
+            'mensagem-cadastro',
+            'Fotografia publicada com sucesso!'
+        );
+
+        await carregarPublicacoes();
+        await atualizarResumoPerfil();
+    } catch (erro) {
+        mostrarMensagem(
+            'mensagem-cadastro',
+            erro.message,
+            true
+        );
+    } finally {
+        botao.disabled = false;
+        botao.textContent = 'Publicar fotografia';
+    }
+}
+
+// =====================================================
+// EXCLUIR FOTOGRAFIA
+// =====================================================
+
+async function excluirPublicacao(idPublicacao) {
+    if (!confirm('Deseja realmente excluir esta fotografia?')) {
         return;
     }
 
     try {
-        // O backend atual recebe JSON.
-        // Isso salva somente o nome do arquivo, não a imagem em si.
-        const resultado = await requisicao('/filmes', {
-            method: 'POST',
-            body: JSON.stringify({
-                titulo,
-                genero,
-                descricao,
-                ano_lancamento: ano || null,
-                imagem_capa: arquivo ? arquivo.name : null
-            })
+        await requisicao(`/publicacoes/${idPublicacao}`, {
+            method: 'DELETE'
         });
 
-        $('mensagem-cadastro').textContent =
-            resultado.mensagem ||
-            'Filme cadastrado com sucesso!';
-
-        $('form-filme').reset();
-
-        $('nome-arquivo').textContent =
-            'Nenhum arquivo escolhido';
-
-        await carregarMeusFilmes();
-        await carregarFilmes();
+        await carregarPublicacoes();
+        await atualizarResumoPerfil();
     } catch (erro) {
-        $('mensagem-cadastro').textContent =
-            erro.message;
-    }
-});
-
-async function iniciar() {
-    carregarSessao();
-
-    await carregarFilmes();
-
-    if (usuarioAtual?.tipo === 'administrador') {
-        try {
-            await carregarMeusFilmes();
-        } catch (erro) {
-            console.warn(
-                'Não foi possível carregar os filmes do administrador:',
-                erro.message
-            );
-        }
+        mostrarMensagem('mensagem', erro.message, true);
     }
 }
 
-iniciar();
+// =====================================================
+// MENU LATERAL DO PERFIL
+// =====================================================
+
+function abrirMenuPerfil() {
+    if (usuarioAtual?.tipo !== 'fotografo') {
+        abrirModalLogin();
+        return;
+    }
+
+    const fundo = elemento('fundo-menu');
+    const menu = elemento('menu-perfil');
+
+    if (fundo) {
+        fundo.hidden = false;
+        fundo.style.display = 'block';
+    }
+
+    if (menu) {
+        menu.hidden = false;
+        menu.style.display = 'block';
+    }
+
+    atualizarCabecalho();
+    atualizarResumoPerfil();
+}
+
+function fecharMenuPerfil() {
+    const fundo = elemento('fundo-menu');
+    const menu = elemento('menu-perfil');
+
+    if (fundo) {
+        fundo.style.display = 'none';
+        fundo.hidden = true;
+    }
+
+    if (menu) {
+        menu.style.display = 'none';
+        menu.hidden = true;
+    }
+}
+
+async function atualizarResumoPerfil() {
+    if (usuarioAtual?.tipo !== 'fotografo') return;
+
+    try {
+        const dados = await requisicao('/publicacoes/minhas');
+        const minhasPublicacoes = dados.publicacoes || [];
+
+        const totalCurtidas = minhasPublicacoes.reduce(
+            (total, item) =>
+                total + Number(item.quantidade_curtidas || 0),
+            0
+        );
+
+        const campoLikes = elemento('total-likes');
+        const campoPublicacoes = elemento('total-filmes');
+
+        if (campoLikes) {
+            campoLikes.textContent = `${totalCurtidas} curtidas`;
+        }
+
+        if (campoPublicacoes) {
+            campoPublicacoes.textContent =
+                `${minhasPublicacoes.length} fotografias`;
+        }
+    } catch (erro) {
+        console.error(
+            'Erro ao carregar resumo:',
+            erro.message
+        );
+    }
+}
+
+async function mostrarMinhasPublicacoes() {
+    fecharMenuPerfil();
+
+    modoMinhasPublicacoes = true;
+    fotografoBuscado = null;
+
+    if (elemento('campo-busca')) {
+        elemento('campo-busca').value = '';
+    }
+
+    atualizarCabecalho();
+    await carregarPublicacoes();
+
+    elemento('secao-cadastro')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+function mostrarFormularioCadastro() {
+    if (usuarioAtual?.tipo !== 'fotografo') {
+        abrirModalLogin();
+        return;
+    }
+
+    fecharMenuPerfil();
+
+    modoMinhasPublicacoes = true;
+    fotografoBuscado = null;
+
+    if (elemento('campo-busca')) {
+        elemento('campo-busca').value = '';
+    }
+
+    atualizarCabecalho();
+    carregarPublicacoes();
+
+    elemento('secao-cadastro')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+
+    elemento('titulo-filme')?.focus();
+}
+
+// =====================================================
+// INICIALIZAÇÃO
+// =====================================================
+
+async function iniciarAplicacao() {
+    atualizarCabecalho();
+
+    await carregarMinhasCurtidas();
+    await carregarPublicacoes();
+    await atualizarResumoPerfil();
+
+    // Atualiza o cabeçalho novamente após carregar a sessão.
+    atualizarCabecalho();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    elemento('form-login')?.addEventListener(
+        'submit',
+        fazerLogin
+    );
+
+    elemento('btn-login')?.addEventListener(
+        'click',
+        abrirModalLogin
+    );
+
+    elemento('btn-fechar-modal')?.addEventListener(
+        'click',
+        fecharModalLogin
+    );
+
+    elemento('btn-cancelar-login')?.addEventListener(
+        'click',
+        fecharModalLogin
+    );
+
+    elemento('btn-logout')?.addEventListener(
+        'click',
+        fazerLogout
+    );
+
+    elemento('btn-perfil')?.addEventListener(
+        'click',
+        abrirMenuPerfil
+    );
+
+    elemento('btn-fechar-perfil')?.addEventListener(
+        'click',
+        fecharMenuPerfil
+    );
+
+    elemento('fundo-menu')?.addEventListener(
+        'click',
+        fecharMenuPerfil
+    );
+
+    elemento('btn-seus-filmes')?.addEventListener(
+        'click',
+        mostrarMinhasPublicacoes
+    );
+
+    elemento('btn-cadastrar-filme')?.addEventListener(
+        'click',
+        mostrarFormularioCadastro
+    );
+
+    elemento('form-filme')?.addEventListener(
+        'submit',
+        cadastrarPublicacao
+    );
+
+    elemento('btn-busca')?.addEventListener(
+        'click',
+        executarBuscaFotografo
+    );
+
+    elemento('campo-busca')?.addEventListener('keydown', (evento) => {
+        if (evento.key === 'Enter') {
+            evento.preventDefault();
+            executarBuscaFotografo();
+        }
+    });
+
+    elemento('capa-filme')?.addEventListener('change', (evento) => {
+        const arquivo = evento.target.files?.[0];
+        const nomeArquivo = elemento('nome-arquivo');
+
+        if (nomeArquivo) {
+            nomeArquivo.textContent =
+                arquivo?.name || 'Nenhum arquivo escolhido';
+        }
+    });
+
+    elemento('modal-login')?.addEventListener('click', (evento) => {
+        if (evento.target === elemento('modal-login')) {
+            fecharModalLogin();
+        }
+    });
+
+    await verificarSessao();
+    await iniciarAplicacao();
+});

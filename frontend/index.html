@@ -1,10 +1,11 @@
-﻿<!DOCTYPE html>
+﻿
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="StreamFlix - Descubra, cadastre e curta filmes.">
-    <title>StreamFlix</title>
+    <meta name="description" content="SAEPVision: compartilhe fotografias e descubra fotógrafos.">
+    <title>SAEPVision</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/app.js" defer></script>
 </head>
@@ -13,25 +14,41 @@
         <section class="secao-usuario">
             <img
                 id="foto-perfil"
-                src="assets/perfil.svg"
+                src="assets/saepVision.jpeg"
                 alt="Foto do perfil"
                 class="foto-perfil"
             >
-            <span id="nome-usuario">@StreamFlix</span>
-            <button id="btn-perfil" class="botao-escuro" type="button">
-                Ver Perfil
+
+            <span id="nome-usuario">@SAEPVision</span>
+
+            <button
+                id="btn-perfil"
+                class="botao-escuro"
+                type="button"
+                disabled
+            >
+                Meu perfil
             </button>
         </section>
 
         <section class="secao-empresa">
-            <h1>StreamFlix</h1>
+            <a href="/" class="logo-saepvision">
+                <img src="assets/saepVision.jpeg" alt="" class="logo-imagem">
+                <h1>SAEPVision</h1>
+            </a>
         </section>
 
         <section class="secao-login">
             <button id="btn-login" class="botao-escuro" type="button">
                 Entrar
             </button>
-            <button id="btn-logout" class="botao-escuro" type="button" hidden>
+
+            <button
+                id="btn-logout"
+                class="botao-escuro"
+                type="button"
+                hidden
+            >
                 Sair
             </button>
         </section>
@@ -42,80 +59,79 @@
             <input
                 id="campo-busca"
                 type="search"
-                placeholder="Digite o nome do administrador..."
-                aria-label="Buscar filmes por administrador"
+                placeholder="Digite o nome de usuário do fotógrafo..."
+                aria-label="Buscar fotógrafo"
             >
-            <button id="btn-busca" type="button" aria-label="Buscar administrador">
+
+            <button id="btn-busca" type="button" aria-label="Buscar fotógrafo">
                 <img src="assets/lupa.svg" alt="">
             </button>
         </section>
 
-        <p id="mensagem-busca" class="mensagem" role="status"></p>
+        <p id="mensagem-busca" class="mensagem" role="status" hidden></p>
 
         <section id="secao-cadastro" class="secao-cadastro" hidden>
-            <h2>Cadastro de Filmes</h2>
+            <h2>Publicar fotografia</h2>
 
-            <form id="form-filme">
-                <label for="titulo-filme">Título do Filme</label>
+            <form id="form-filme" enctype="multipart/form-data">
+                <label for="titulo-filme">Título da fotografia</label>
+
                 <input
                     id="titulo-filme"
-                    name="titulo"
+                    name="titulo_imagem"
                     type="text"
-                    placeholder="Ex.: Interestelar"
+                    placeholder="Ex.: Pôr do sol na praia"
+                    maxlength="150"
                     required
                 >
-                <p id="erro-titulo" class="mensagem-erro" role="alert"></p>
 
-                <label for="genero-filme">Gênero</label>
+                <p id="erro-titulo" class="mensagem-erro" role="alert" hidden></p>
+
+                <label for="genero-filme">Local da fotografia</label>
+
                 <input
                     id="genero-filme"
-                    name="genero"
+                    name="local_foto"
                     type="text"
-                    placeholder="Ex.: Ficção Científica"
+                    placeholder="Ex.: Florianópolis, SC"
+                    maxlength="150"
                     required
                 >
-                <p id="erro-genero" class="mensagem-erro" role="alert"></p>
 
-                <label for="descricao-filme">Descrição</label>
-                <textarea
-                    id="descricao-filme"
-                    name="descricao"
-                    placeholder="Escreva uma breve descrição do filme"
-                    rows="3"
-                ></textarea>
+                <p id="erro-genero" class="mensagem-erro" role="alert" hidden></p>
 
-                <label for="ano-filme">Ano de lançamento</label>
-                <input
-                    id="ano-filme"
-                    name="ano_lancamento"
-                    type="number"
-                    min="1888"
-                    placeholder="Ex.: 2014"
-                >
+                <label for="capa-filme">Escolha a fotografia</label>
 
-                <label for="capa-filme">Capa do filme</label>
                 <input
                     id="capa-filme"
-                    name="capa"
+                    name="fotografia"
                     type="file"
                     accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
+                    required
                 >
-                <p id="nome-arquivo">Nenhum arquivo escolhido</p>
-                <p id="erro-capa" class="mensagem-erro" role="alert"></p>
-                <p id="mensagem-cadastro" class="mensagem" role="status"></p>
 
-                <button class="botao-escuro" type="submit">Cadastrar</button>
+                <p id="nome-arquivo">Nenhum arquivo escolhido</p>
+
+                <p id="erro-capa" class="mensagem-erro" role="alert" hidden></p>
+
+                <p id="mensagem-cadastro" class="mensagem" role="status" hidden></p>
+
+                <button class="botao-escuro" type="submit">
+                    Publicar fotografia
+                </button>
             </form>
 
-            <h2>Seus filmes cadastrados</h2>
+            <h2>Minhas fotografias</h2>
             <div id="lista-filmes-admin" class="lista-filmes"></div>
         </section>
 
         <section class="secao-galeria">
-            <h2 id="titulo-galeria">Galeria de filmes</h2>
+            <h2 id="titulo-galeria">Galeria de fotografias</h2>
+
             <p id="mensagem" class="mensagem" role="status">
-                Carregando filmes...
+                Carregando fotografias...
             </p>
+
             <div id="lista-filmes" class="lista-filmes"></div>
         </section>
     </main>
@@ -125,7 +141,7 @@
     <aside
         id="menu-perfil"
         class="menu-lateral"
-        aria-label="Perfil do administrador"
+        aria-label="Perfil do fotógrafo"
         hidden
     >
         <button
@@ -135,27 +151,43 @@
             aria-label="Fechar menu"
         >×</button>
 
-        <h2>Perfil do administrador</h2>
-        <p id="total-likes">0 Likes</p>
-        <p id="total-filmes">0 Filmes</p>
+        <img
+            id="foto-perfil-menu"
+            src="assets/saepVision.jpeg"
+            alt="Foto do perfil"
+            class="foto-perfil foto-perfil-menu"
+        >
 
-        <button id="btn-seus-filmes" type="button">Seus filmes</button>
-        <button id="btn-cadastrar-filme" type="button">Cadastrar filme</button>
+        <h2 id="nome-perfil-menu">Meu perfil</h2>
+
+        <p id="total-likes">0 curtidas</p>
+        <p id="total-filmes">0 fotografias</p>
+
+        <button id="btn-seus-filmes" type="button">
+            Minhas fotografias
+        </button>
+
+        <button id="btn-cadastrar-filme" type="button">
+            Publicar fotografia
+        </button>
     </aside>
 
     <footer class="rodape">
-        <strong>StreamFlix</strong>
+        <strong>SAEPVision</strong>
 
         <div class="rodape-redes">
             <a href="https://www.instagram.com/" aria-label="Instagram">
                 <img src="assets/instagram.svg" alt="">
             </a>
+
             <a href="https://www.tiktok.com/" aria-label="TikTok">
                 <img src="assets/tiktok.svg" alt="">
             </a>
+
             <a href="https://www.linkedin.com/" aria-label="LinkedIn">
                 <img src="assets/linkedIn.svg" alt="">
             </a>
+
             <a href="https://www.youtube.com/" aria-label="YouTube">
                 <img src="assets/youtube.svg" alt="">
             </a>
@@ -173,21 +205,24 @@
                 aria-label="Fechar login"
             >×</button>
 
-            <h2>Login</h2>
+            <h2>Entrar</h2>
 
             <label for="nome_usuario">Nome de usuário</label>
+
             <input
                 id="nome_usuario"
                 name="nome_usuario"
                 type="text"
-                placeholder="Digite seu nome_usuario"
+                placeholder="Digite seu nome de usuário"
                 minlength="3"
                 required
                 autocomplete="username"
             >
-            <p id="erro-nome-usuario" class="mensagem-erro" role="alert"></p>
+
+            <p id="erro-nome-usuario" class="mensagem-erro" role="alert" hidden></p>
 
             <label for="senha">Senha</label>
+
             <input
                 id="senha"
                 name="senha"
@@ -196,18 +231,278 @@
                 required
                 autocomplete="current-password"
             >
-            <p id="erro-senha" class="mensagem-erro" role="alert"></p>
 
-            <p id="mensagem-login" class="mensagem" role="status"></p>
+            <p id="erro-senha" class="mensagem-erro" role="alert" hidden></p>
+
+            <p id="mensagem-login" class="mensagem" role="status" hidden></p>
 
             <div class="botoes-login">
                 <button
                     type="button"
                     id="btn-cancelar-login"
                     class="botao-cancelar"
-                >Cancelar</button>
+                >
+                    Cancelar
+                </button>
 
-                <button type="submit" class="botao-escuro">Entrar</button>
+                <button type="submit" class="botao-escuro">
+                    Entrar
+                </button>
+            </div>
+        </form>
+    </dialog>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SAEPVision: compartilhe fotografias e descubra fotógrafos.">
+    <title>SAEPVision</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <header class="cabecalho">
+        <section class="secao-usuario">
+            <img
+                id="foto-perfil"
+                src="assets/saepVision.jpeg"
+                alt="Foto do perfil"
+                class="foto-perfil"
+            >
+
+            <span id="nome-usuario">@SAEPVision</span>
+
+            <button
+                id="btn-perfil"
+                class="botao-escuro"
+                type="button"
+                disabled
+            >
+                Meu perfil
+            </button>
+        </section>
+
+        <section class="secao-empresa">
+            <a href="/" class="logo-saepvision">
+                <img src="assets/saepVision.jpeg" alt="" class="logo-imagem">
+                <h1>SAEPVision</h1>
+            </a>
+        </section>
+
+        <section class="secao-login">
+            <button id="btn-login" class="botao-escuro" type="button">
+                Entrar
+            </button>
+
+            <button
+                id="btn-logout"
+                class="botao-escuro"
+                type="button"
+                hidden
+            >
+                Sair
+            </button>
+        </section>
+    </header>
+
+    <main class="conteudo">
+        <section id="secao-busca" class="secao-busca">
+            <input
+                id="campo-busca"
+                type="search"
+                placeholder="Digite o nome de usuário do fotógrafo..."
+                aria-label="Buscar fotógrafo"
+            >
+
+            <button id="btn-busca" type="button" aria-label="Buscar fotógrafo">
+                <img src="assets/lupa.svg" alt="">
+            </button>
+        </section>
+
+        <p id="mensagem-busca" class="mensagem" role="status" hidden></p>
+
+        <section id="secao-cadastro" class="secao-cadastro" hidden>
+            <h2>Publicar fotografia</h2>
+
+            <form id="form-filme" enctype="multipart/form-data">
+                <label for="titulo-filme">Título da fotografia</label>
+
+                <input
+                    id="titulo-filme"
+                    name="titulo_imagem"
+                    type="text"
+                    placeholder="Ex.: Pôr do sol na praia"
+                    maxlength="150"
+                    required
+                >
+
+                <p id="erro-titulo" class="mensagem-erro" role="alert" hidden></p>
+
+                <label for="genero-filme">Local da fotografia</label>
+
+                <input
+                    id="genero-filme"
+                    name="local_foto"
+                    type="text"
+                    placeholder="Ex.: Florianópolis, SC"
+                    maxlength="150"
+                    required
+                >
+
+                <p id="erro-genero" class="mensagem-erro" role="alert" hidden></p>
+
+                <label for="capa-filme">Escolha a fotografia</label>
+
+                <input
+                    id="capa-filme"
+                    name="fotografia"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp"
+                    required
+                >
+
+                <p id="nome-arquivo">Nenhum arquivo escolhido</p>
+
+                <p id="erro-capa" class="mensagem-erro" role="alert" hidden></p>
+
+                <p id="mensagem-cadastro" class="mensagem" role="status" hidden></p>
+
+                <button class="botao-escuro" type="submit">
+                    Publicar fotografia
+                </button>
+            </form>
+
+            <h2>Minhas fotografias</h2>
+            <div id="lista-filmes-admin" class="lista-filmes"></div>
+        </section>
+
+        <section class="secao-galeria">
+            <h2 id="titulo-galeria">Galeria de fotografias</h2>
+
+            <p id="mensagem" class="mensagem" role="status">
+                Carregando fotografias...
+            </p>
+
+            <div id="lista-filmes" class="lista-filmes"></div>
+        </section>
+    </main>
+
+    <div id="fundo-menu" class="fundo-menu" hidden></div>
+
+    <aside
+        id="menu-perfil"
+        class="menu-lateral"
+        aria-label="Perfil do fotógrafo"
+        hidden
+    >
+        <button
+            id="btn-fechar-perfil"
+            class="fechar-modal"
+            type="button"
+            aria-label="Fechar menu"
+        >×</button>
+
+        <img
+            id="foto-perfil-menu"
+            src="assets/saepVision.jpeg"
+            alt="Foto do perfil"
+            class="foto-perfil foto-perfil-menu"
+        >
+
+        <h2 id="nome-perfil-menu">Meu perfil</h2>
+
+        <p id="total-likes">0 curtidas</p>
+        <p id="total-filmes">0 fotografias</p>
+
+        <button id="btn-seus-filmes" type="button">
+            Minhas fotografias
+        </button>
+
+        <button id="btn-cadastrar-filme" type="button">
+            Publicar fotografia
+        </button>
+    </aside>
+
+    <footer class="rodape">
+        <strong>SAEPVision</strong>
+
+        <div class="rodape-redes">
+            <a href="https://www.instagram.com/" aria-label="Instagram">
+                <img src="assets/instagram.svg" alt="">
+            </a>
+
+            <a href="https://www.tiktok.com/" aria-label="TikTok">
+                <img src="assets/tiktok.svg" alt="">
+            </a>
+
+            <a href="https://www.linkedin.com/" aria-label="LinkedIn">
+                <img src="assets/linkedIn.svg" alt="">
+            </a>
+
+            <a href="https://www.youtube.com/" aria-label="YouTube">
+                <img src="assets/youtube.svg" alt="">
+            </a>
+        </div>
+
+        <span>Copyright 2026-2027</span>
+    </footer>
+
+    <dialog id="modal-login" class="modal-login">
+        <form id="form-login" class="form-login">
+            <button
+                type="button"
+                id="btn-fechar-modal"
+                class="fechar-modal"
+                aria-label="Fechar login"
+            >×</button>
+
+            <h2>Entrar</h2>
+
+            <label for="nome_usuario">Nome de usuário</label>
+
+            <input
+                id="nome_usuario"
+                name="nome_usuario"
+                type="text"
+                placeholder="Digite seu nome de usuário"
+                minlength="3"
+                required
+                autocomplete="username"
+            >
+
+            <p id="erro-nome-usuario" class="mensagem-erro" role="alert" hidden></p>
+
+            <label for="senha">Senha</label>
+
+            <input
+                id="senha"
+                name="senha"
+                type="password"
+                placeholder="Digite sua senha"
+                required
+                autocomplete="current-password"
+            >
+
+            <p id="erro-senha" class="mensagem-erro" role="alert" hidden></p>
+
+            <p id="mensagem-login" class="mensagem" role="status" hidden></p>
+
+            <div class="botoes-login">
+                <button
+                    type="button"
+                    id="btn-cancelar-login"
+                    class="botao-cancelar"
+                >
+                    Cancelar
+                </button>
+
+                <button type="submit" class="botao-escuro">
+                    Entrar
+                </button>
             </div>
         </form>
     </dialog>

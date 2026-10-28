@@ -1,25 +1,39 @@
-﻿const express = require('express');
+﻿
+const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
-const jwt = require('jsonwebtoken');
+
+function usuarioSeguro(usuario) {
+    return {
+        id_usuario: usuario.id_usuario,
+        nome: usuario.nome,
+        nome_usuario: usuario.nome_usuario,
+        email: usuario.email,
+        imagem_usuario: usuario.imagem_usuario,
+        tipo: usuario.tipo
+    };
+}
+
 
 router.post('/login', async (req, res) => {
     try {
         const { nome_usuario, senha } = req.body;
 
-        if (
-            typeof nome_usuario !== 'string' ||
-            typeof senha !== 'string' ||
-            !nome_usuario.trim() ||
-            !senha
-        ) {
+        if (!nome_usuario || !senha) {
             return res.status(400).json({
                 erro: 'Informe o nome de usuário e a senha.'
             });
         }
 
         const resultado = await pool.query(
-            `SELECT id_usuario, nome, nome_usuario, email, senha, tipo, imagem_usuario
+            `SELECT
+                id_usuario,
+                nome,
+                nome_usuario,
+                email,
+                senha,
+                imagem_usuario,
+                tipo
              FROM tb_usuario
              WHERE nome_usuario = $1`,
             [nome_usuario.trim()]
@@ -32,52 +46,94 @@ router.post('/login', async (req, res) => {
         }
 
         const usuario = resultado.rows[0];
+        let senhaValida = false;
 
-        const verificacao = await pool.query(
-            'SELECT crypt($1, $2) = $2 AS senha_valida',
-            [senha, usuario.senha]
-        );
+        
+        if (senha === usuario.senha) {
+            senhaValida = true;
+        } else {
+            
+            try {
+                const verificacao = await pool.query(
+                    'SELECT ($1 = crypt($2, $1)) AS valida',
+                    [usuario.senha, senha]
+                );
 
-        if (!verificacao.rows[0].senha_valida) {
+                senhaValida = verificacao.rows[0].valida === true;
+            } catch (erroSenha) {
+                senhaValida = false;
+            }
+        }
+
+        if (!senhaValida) {
             return res.status(401).json({
                 erro: 'Usuário ou senha incorretos.'
             });
         }
 
-        if (!process.env.JWT_SECRET) {
-            console.error('JWT_SECRET não está configurado.');
-            return res.status(500).json({
-                erro: 'Configuração de autenticação incompleta.'
-            });
-        }
+        req.session.usuario = usuarioSeguro(usuario);
 
-        const token = jwt.sign(
-            {
-                id_usuario: usuario.id_usuario,
-                tipo: usuario.tipo
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '2h' }
-        );
+        req.session.save((erro) => {
+            if (erro) {
+                console.error('Erro ao salvar sessão:', erro.message);
 
-        res.json({
-            mensagem: 'Login realizado com sucesso!',
-            token,
-            usuario: {
-                id_usuario: usuario.id_usuario,
-                nome: usuario.nome,
-                nome_usuario: usuario.nome_usuario,
-                email: usuario.email,
-                tipo: usuario.tipo,
-                imagem_usuario: usuario.imagem_usuario
+                return res.status(500).json({
+                    erro: 'Não foi possível iniciar a sessão.'
+                });
             }
+
+            return res.json({
+                mensagem: 'Login realizado com sucesso!',
+                usuario: req.session.usuario
+            });
         });
     } catch (erro) {
         console.error('Erro no login:', erro.message);
+
         res.status(500).json({
-            erro: 'Não foi possível realizar o login.'
+            erro: 'Erro interno ao realizar login.'
         });
     }
+});
+
+
+router.get('/sessao', (req, res) => {
+    if (!req.session || !req.session.usuario) {
+        return res.status(401).json({
+            autenticado: false,
+            mensagem: 'Nenhum usuário conectado.'
+        });
+    }
+
+    res.json({
+        autenticado: true,
+        usuario: req.session.usuario
+    });
+});
+
+
+router.post('/logout', (req, res) => {
+    if (!req.session) {
+        return res.json({
+            mensagem: 'Logout realizado.'
+        });
+    }
+
+    req.session.destroy((erro) => {
+        if (erro) {
+            console.error('Erro ao encerrar sessão:', erro.message);
+
+            return res.status(500).json({
+                erro: 'Não foi possível encerrar a sessão.'
+            });
+        }
+
+        res.clearCookie('connect.sid');
+
+        res.json({
+            mensagem: 'Logout realizado com sucesso!'
+        });
+    });
 });
 
 module.exports = router;

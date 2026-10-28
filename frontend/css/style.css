@@ -1,4 +1,5 @@
-﻿* {
+﻿
+* {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -43,7 +44,7 @@ button:disabled {
     align-items: center;
     gap: 20px;
     padding: 16px 5%;
-    background: #050505;
+    background: #000;
     color: #fff;
 }
 
@@ -79,20 +80,18 @@ button:disabled {
 
 .botao-escuro {
     padding: 10px 18px;
-    border: 1px solid #111;
-    border-radius: 5px;
-    background: #080808;
+    border: 1px solid #000;
+    border-radius: 4px;
+    background: #000;
     color: #fff;
-    transition: background 0.2s, transform 0.2s;
+    transition: background 0.2s;
 }
 
 .botao-escuro:hover:not(:disabled) {
     background: #333;
 }
 
-.botao-escuro:active:not(:disabled) {
-    transform: scale(0.98);
-}
+/* CONTEÚDO */
 
 .conteudo {
     width: min(1200px, 92%);
@@ -112,7 +111,7 @@ button:disabled {
     padding: 13px 15px;
     border: 1px solid #bbb;
     border-right: 0;
-    border-radius: 6px 0 0 6px;
+    border-radius: 5px 0 0 5px;
     background: #fff;
     outline-offset: 2px;
 }
@@ -122,9 +121,9 @@ button:disabled {
     flex-shrink: 0;
     display: grid;
     place-items: center;
-    border: 1px solid #111;
-    border-radius: 0 6px 6px 0;
-    background: #080808;
+    border: 1px solid #000;
+    border-radius: 0 5px 5px 0;
+    background: #000;
 }
 
 .secao-busca button img {
@@ -144,8 +143,11 @@ button:disabled {
     line-height: 1.5;
 }
 
+.mensagem.erro {
+    color: #c40000;
+}
+
 .mensagem-erro {
-    min-height: 0;
     margin: 4px 0 10px;
     color: #c40000;
     font-size: 13px;
@@ -158,18 +160,20 @@ button:disabled {
     align-items: start;
 }
 
-.filme {
+.filme,
+.cartao-filme {
     min-width: 0;
     overflow: hidden;
     position: relative;
-    border-radius: 8px;
+    border-radius: 5px;
     background: #fff;
     box-shadow: 0 3px 12px rgb(0 0 0 / 12%);
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.filme:hover {
-    transform: translateY(-4px);
+.filme:hover,
+.cartao-filme:hover {
+    transform: translateY(-3px);
     box-shadow: 0 7px 20px rgb(0 0 0 / 18%);
 }
 
@@ -203,35 +207,45 @@ button:disabled {
     align-items: center;
     gap: 9px;
     margin-top: 12px;
+    flex-wrap: wrap;
 }
 
 .botao-curtir {
-    width: 38px;
-    height: 38px;
-    display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
+    min-height: 36px;
+    padding: 5px 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #000;
 }
 
 .botao-curtir:hover {
     background: #f0f0f0;
 }
 
-.icone-coracao {
-    width: 25px;
-    height: 25px;
-    object-fit: contain;
-}
-
-.botao-curtir.curtiu .icone-coracao {
-    filter: none;
+.botao-curtir[aria-pressed="true"] {
+    color: #f00;
 }
 
 .quantidade-curtidas {
     font-size: 14px;
     font-weight: bold;
+}
+
+.botao-excluir {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border: 1px solid #c40000;
+    border-radius: 4px;
+    background: #fff;
+    color: #c40000;
+}
+
+.botao-excluir:hover {
+    background: #fff0f0;
 }
 
 .informacao-filme {
@@ -251,15 +265,18 @@ button:disabled {
 }
 
 .filme:hover .informacao-filme,
-.filme:focus-within .informacao-filme {
+.filme:focus-within .informacao-filme,
+.cartao-filme:hover .informacao-filme,
+.cartao-filme:focus-within .informacao-filme {
     opacity: 1;
 }
+
 
 .secao-cadastro {
     margin: 30px 0;
     padding: 24px;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 5px;
     background: #fff;
 }
 
@@ -282,7 +299,7 @@ button:disabled {
     width: 100%;
     padding: 12px;
     border: 1px solid #bbb;
-    border-radius: 5px;
+    border-radius: 4px;
     background: #fff;
 }
 
@@ -305,6 +322,7 @@ button:disabled {
     margin-top: 10px;
 }
 
+
 .modal-login {
     width: min(440px, calc(100% - 32px));
     max-height: 90vh;
@@ -312,7 +330,7 @@ button:disabled {
     padding: 28px;
     overflow-y: auto;
     border: 0;
-    border-radius: 10px;
+    border-radius: 5px;
     background: #fff;
     color: #171717;
     box-shadow: 0 12px 50px rgb(0 0 0 / 25%);
@@ -339,7 +357,7 @@ button:disabled {
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 5px;
+    border-radius: 4px;
     background: transparent;
     color: inherit;
     font-size: 28px;
@@ -365,27 +383,28 @@ button:disabled {
 
 .botao-cancelar {
     padding: 10px 18px;
-    border: 1px solid #111;
-    border-radius: 5px;
+    border: 1px solid #000;
+    border-radius: 4px;
     background: #fff;
-    color: #111;
+    color: #000;
 }
 
 .botao-cancelar:hover {
     background: #eee;
 }
 
+
 .menu-lateral {
     position: fixed;
     z-index: 1001;
     top: 0;
-    right: 0;
+    left: 0;
     width: min(360px, 88vw);
     height: 100dvh;
     padding: 28px 24px;
     overflow-y: auto;
     background: #fff;
-    box-shadow: -5px 0 25px rgb(0 0 0 / 15%);
+    box-shadow: 5px 0 25px rgb(0 0 0 / 15%);
 }
 
 .menu-lateral > .fechar-modal {
@@ -408,8 +427,8 @@ button:disabled {
     margin-top: 18px;
     padding: 13px;
     border: 0;
-    border-top: 1px solid #111;
-    border-bottom: 1px solid #111;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
     background: #fff;
     color: #111;
     text-align: left;
@@ -426,6 +445,8 @@ button:disabled {
     background: rgb(0 0 0 / 45%);
 }
 
+
+
 .rodape {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -433,7 +454,7 @@ button:disabled {
     gap: 20px;
     min-height: 90px;
     padding: 20px 5%;
-    background: #050505;
+    background: #000;
     color: #fff;
 }
 
@@ -459,6 +480,8 @@ button:disabled {
     height: 25px;
     object-fit: contain;
 }
+
+
 
 @media (max-width: 800px) {
     .cabecalho {
@@ -563,5 +586,187 @@ button:disabled {
     .rodape-redes {
         grid-column: auto;
         grid-row: auto;
+    }
+}
+
+
+#modal-login {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.65);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+
+#modal-login form {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 28px;
+    box-sizing: border-box;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+#modal-login h2 {
+    margin: 0 0 28px;
+    text-align: center;
+    font-size: 24px;
+    color: #111;
+}
+
+
+#modal-login label {
+    display: block;
+    margin: 0 0 8px;
+    font-weight: 600;
+    color: #222;
+}
+
+#modal-login input {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin: 0 0 24px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+#modal-login input:focus {
+    outline: 2px solid #222;
+    outline-offset: 1px;
+    border-color: #222;
+}
+
+
+#modal-login form button {
+    min-height: 40px;
+    padding: 9px 20px;
+    border: 1px solid #000;
+    border-radius: 4px;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+#modal-login #btn-cancelar-login {
+    color: #000;
+    background: #fff;
+}
+
+#modal-login form button[type="submit"] {
+    color: #fff;
+    background: #000;
+}
+
+#modal-login form button:hover {
+    opacity: 0.8;
+}
+
+
+#modal-login #mensagem-login,
+#modal-login .erro {
+    color: #c62828;
+    font-size: 14px;
+    margin: 0 0 12px;
+}
+
+
+@media (max-width: 480px) {
+    #modal-login {
+        padding: 12px;
+    }
+
+    #modal-login form {
+        padding: 24px 20px;
+    }
+}
+
+
+
+.cabecalho {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 20px;
+}
+
+.secao-usuario {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.foto-perfil {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #dddddd;
+}
+
+.logo-saepvision {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.logo-saepvision h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.logo-imagem {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.secao-login {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.foto-perfil-menu {
+    display: block;
+    width: 90px;
+    height: 90px;
+    margin: 20px auto;
+}
+
+@media (max-width: 700px) {
+    .cabecalho {
+        grid-template-columns: 1fr auto;
+    }
+
+    .secao-empresa {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        text-align: center;
+    }
+
+    .secao-usuario {
+        grid-column: 1;
+        grid-row: 2;
+        flex-wrap: wrap;
+    }
+
+    .secao-login {
+        grid-column: 2;
+        grid-row: 2;
     }
 }
